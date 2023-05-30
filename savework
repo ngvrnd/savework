@@ -1,0 +1,64 @@
+#!/bin/bash
+
+function push_state {
+    project_dir=$(pwd)
+    project_name=$(basename $project_dir)
+    backup_dir=$(dirname $project_dir)/saveWork_bkup
+    mkdir -p $backup_dir
+
+    timestamp=$(date +%Y%m%d%H%M%S)
+    backup_file="$backup_dir/backup-$project_name-$timestamp.tar.gz"
+    tar -czf $backup_file -C $project_dir .
+    echo "Pushed state: $backup_file"
+}
+
+function pop_state {
+    project_dir=$(pwd)
+    project_name=$(basename $project_dir)
+    backup_dir=$(dirname $project_dir)/saveWork_bkup
+
+    latest_backup=$(ls -t $backup_dir/backup-$project_name-*.tar.gz | head -n 1)
+
+    if [ -z "$latest_backup" ]; then
+        echo "No saved states to pop."
+    else
+        rm -r $project_dir/*
+        tar -xzf $latest_backup -C $project_dir
+        rm $latest_backup
+        echo "Popped state: $latest_backup"
+    fi
+}
+
+function list_states {
+    project_dir=$(pwd)
+    project_name=$(basename $project_dir)
+    backup_dir=$(dirname $project_dir)/saveWork_bkup
+    backup_files=$(ls -t $backup_dir/backup-$project_name-*.tar.gz)
+    
+    if [ -z "$backup_files" ]; then
+        echo "No saved states."
+    else
+        echo "Saved states:"
+        for backup_file in $backup_files
+        do
+            timestamp=$(echo $backup_file | grep -o '[0-9]\{14\}')
+            formatted_timestamp=$(date -d "${timestamp:0:8} ${timestamp:8:2}:${timestamp:10:2}:${timestamp:12:2}")
+            echo "$backup_file (created at $formatted_timestamp)"
+        done
+    fi
+}
+
+case "$1" in
+    push)
+        push_state
+        ;;
+    pop)
+        pop_state
+        ;;
+    list)
+        list_states
+        ;;
+    *)
+        echo "Usage: $0 {push|pop|list}"
+esac
+

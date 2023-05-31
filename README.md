@@ -23,13 +23,22 @@ Saved states:
 λ ~/tms/ main* savework push
 
 Pushed state: /Users/nicholascaruso/saveWork_bkup/backup-tms-20230531094750.tar.gz
+
 λ ~/tms/ main* savework list
+
 Saved states:
+
 /Users/ngvrnd/saveWork_bkup/backup-tms-20230531094750.tar.gz (created at 2023-05-31 09:47:50)
+
 /Users/ngvrnd/saveWork_bkup/backup-tms-20230518190302.tar.gz (created at 2023-05-18 19:03:02)
+
 λ ~/tms/ main* savework pop
+
 Popped state: /Users/nicholascaruso/saveWork_bkup/backup-tms-20230531094750.tar.gz
+
 λ ~/tms/ main* savework list
+
 Saved states:
+
 /Users/ngvrnd/saveWork_bkup/backup-tms-20230518190302.tar.gz (created at 2023-05-18 19:03:02)
 λ ~/tms/ main*

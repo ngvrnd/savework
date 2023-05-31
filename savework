@@ -12,6 +12,7 @@ function push_state {
     echo "Pushed state: $backup_file"
 }
 
+
 function pop_state {
     project_dir=$(pwd)
     project_name=$(basename $project_dir)
@@ -22,10 +23,37 @@ function pop_state {
     if [ -z "$latest_backup" ]; then
         echo "No saved states to pop."
     else
-        rm -r $project_dir/*
+        if [ "$2" != "merge" ]; then
+	    echo "clean restore"
+            rm -r $project_dir/*
+	else
+	    echo "restoring into existing subtree "
+        fi
         tar -xzf $latest_backup -C $project_dir
         rm $latest_backup
         echo "Popped state: $latest_backup"
+    fi
+}
+
+
+function restore_state {
+    project_dir=$(pwd)
+    project_name=$(basename $project_dir)
+    backup_dir=$(dirname $project_dir)/saveWork_bkup
+
+    latest_backup=$(ls -t $backup_dir/backup-$project_name-*.tar.gz | head -n 1)
+
+    if [ -z "$latest_backup" ]; then
+        echo "No saved states to pop."
+    else
+        if [ "$2" != "merge" ]; then
+	    echo "clean restore"
+            rm -r $project_dir/*
+	else
+	    echo " restoring into existing subtree "
+	fi
+        tar -xzf $latest_backup -C $project_dir
+        echo "restored state: $latest_backup"
     fi
 }
 
@@ -47,7 +75,6 @@ function list_states {
         done
     fi
 }
-
 
 function duplicate_state {
     if [ -z "$2" ]; then
@@ -82,8 +109,22 @@ case "$1" in
     list)
         list_states
         ;;
+    duplicate)
+	duplicate_state
+	;;
+    restore)
+	restore_state
+	;;
     *)
-        echo "Usage: $0 {push|pop|list|duplicate|restore}"
-	echo "  duplicate makes a copy of the latest backup, restore is like pop but doesn't delete the backup."
+        echo "Usage: $0 {push|duplicate <pathspec>|pop [over]|restore [over]}"
+	echo "  push      -- make a tgz of the tree rooted at the cwd, push it into a stack named ''saveWork_bkup''"
+        echo "               in the  directory above the cwd."
+	echo "  duplicate --  makes a copy of the latest backup at the given <pathspec>"
+	echo "  list      -- list the backups currently available for the cwd."
+	echo "  pop       -- restore the last saved tarball of the cwd, and delete the tarball afterwards."
+	echo "  restore   -- restore the last saved tarball of the cwd, but do not delete the tarball afterwards."
+	echo ""
+	echo "               by default,  pop and restore wipe the subtree at cwd before restoring; the ''over'' option to"
+	echo "               pop and restore causes the backup to be restored into/over the existing cwd; "
+	echo ""
 esac
-

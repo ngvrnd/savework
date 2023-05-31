@@ -1,4 +1,7 @@
 # savework
+
+Work In Progess -- mostly an exploration of an idea -- and an experiment in using chatgpt to write code.
+
 a simple script that just ... creates a timestamped tarball of the subtree rooted at the CWD. 
 Does not involve any version control shenanigans. Of limited usefulness.  
 It's dangerous. You have no one to blame but yourself if you use it.  Hope you like it!

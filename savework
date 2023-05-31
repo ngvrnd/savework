@@ -34,7 +34,7 @@ function list_states {
     project_name=$(basename $project_dir)
     backup_dir=$(dirname $project_dir)/saveWork_bkup
     backup_files=$(ls -t $backup_dir/backup-$project_name-*.tar.gz)
-    
+
     if [ -z "$backup_files" ]; then
         echo "No saved states."
     else
@@ -42,11 +42,35 @@ function list_states {
         for backup_file in $backup_files
         do
             timestamp=$(echo $backup_file | grep -o '[0-9]\{14\}')
-            formatted_timestamp=$(date -d "${timestamp:0:8} ${timestamp:8:2}:${timestamp:10:2}:${timestamp:12:2}")
+            formatted_timestamp=$(date -j -f "%Y%m%d%H%M%S" "$timestamp" "+%Y-%m-%d %H:%M:%S")
             echo "$backup_file (created at $formatted_timestamp)"
         done
     fi
 }
+
+
+function duplicate_state {
+    if [ -z "$2" ]; then
+        echo "Please specify a directory for the duplicate state."
+        exit 1
+    fi
+
+    project_dir=$(pwd)
+    project_name=$(basename $project_dir)
+    backup_dir=$(dirname $project_dir)/saveWork_bkup
+
+    latest_backup=$(ls -t $backup_dir/backup-$project_name-*.tar.gz | head -n 1)
+
+    if [ -z "$latest_backup" ]; then
+        echo "No saved states to duplicate."
+        exit 1
+    else
+        mkdir -p $2
+        tar -xzf $latest_backup -C $2
+        echo "Duplicated state to: $2"
+    fi
+}
+
 
 case "$1" in
     push)
@@ -59,6 +83,7 @@ case "$1" in
         list_states
         ;;
     *)
-        echo "Usage: $0 {push|pop|list}"
+        echo "Usage: $0 {push|pop|list|duplicate|restore}"
+	echo "  duplicate makes a copy of the latest backup, restore is like pop but doesn't delete the backup."
 esac
 

@@ -1,44 +1,42 @@
-# savework
+# saveWork
 
-Work In Progess -- mostly an exploration of an idea -- and an experiment in using chatgpt to write code.
+## Overview
 
-a simple script that just ... creates a timestamped tarball of the subtree rooted at the CWD. 
-Does not involve any version control shenanigans. Of limited usefulness.  
-It's dangerous. You have no one to blame but yourself if you use it.  Hope you like it!
-You have been warned. 
-DILUTE!!! DILUTE!!! 
+The `savework` command-line tool provides a simple way to manage and restore backups of your current working directory. It's useful when you want to try out changes without the risk of permanently altering your files.
 
-Usage: ./savework ...
+This tool creates a backup of your entire working directory, allowing you to revert back to the saved state or even create a duplicate of it in a new location.
 
-  makes a tar archive of the current working directory and saves it in a directory one level up in the hierarchy; creates the directory if it doesn't exist.  pop does the obvious thing, deleting the saved version.  Be careful with this.  It's dangerous.
-  list also does the obvious thing.  
-  Examples:
+## Features
 
-λ ~/tms/ main* savework list
+* **push**: Saves the current state of your working directory.
+* **pop**: Restores the most recently saved state of your working directory and removes it from the list of saved states.
+* **restore**: Restores a saved state without removing it from the list of saved states. 
+* **list**: Displays all saved states.
+* **backup_dir**: Prints the path to the backup directory.
 
-Saved states:
+**Note**: push and restore take an optional argument **merge**; without it they wipe out any new files and cleanly restore the save; with it they leave newly created files alone. **merge** is perhaps not the best name for this option and may be renamed in future releases.
 
-/Users/ngvrnd/saveWork_bkup/backup-tms-20230518190302.tar.gz (created at 2023-05-18 19:03:02)
 
-λ ~/tms/ main* savework push
+## Installation
 
-Pushed state: /Users/nicholascaruso/saveWork_bkup/backup-tms-20230531094750.tar.gz
+Copy the `savework` script to a directory included in your PATH environment variable.
 
-λ ~/tms/ main* savework list
+## Usage
 
-Saved states:
+```bash
+savework push                       # Save the current state of the subtree rooted in the current working directory.
+savework pop                        # Restore the most recently saved state cleanly -- deleting any newly created files, and delete the backup
+savework pop merge                  # Restore the most recently saved state on top of the current work, preserving any created files, and delete the backup
+savework restore                    # Restore the most recently saved state cleanly -- deleting any newly created files, without deleting the backup
+savework restore merge              # Restore the most recently saved state on top of the current work, preserving any newly created files, without deleting the backup
+savework list                       # List all saved states
+savework backup_dir                 # Display the path to the backup directory
+```
 
-/Users/ngvrnd/saveWork_bkup/backup-tms-20230531094750.tar.gz (created at 2023-05-31 09:47:50)
+## Testing
 
-/Users/ngvrnd/saveWork_bkup/backup-tms-20230518190302.tar.gz (created at 2023-05-18 19:03:02)
+A basic test script `simpletest` is included in the repository. This script exercises each of the commands and can be used as a basic test of the functionality in the script.
 
-λ ~/tms/ main* savework pop
+## Disclaimer
 
-Popped state: /Users/nicholascaruso/saveWork_bkup/backup-tms-20230531094750.tar.gz
-
-λ ~/tms/ main* savework list
-
-Saved states:
-
-/Users/ngvrnd/saveWork_bkup/backup-tms-20230518190302.tar.gz (created at 2023-05-18 19:03:02)
-λ ~/tms/ main*
+This tool is provided as-is with no warranty. Always ensure that your files are properly backed up before using this tool.

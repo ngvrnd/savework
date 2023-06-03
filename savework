@@ -1,10 +1,17 @@
 #!/bin/bash
 
-function push_state {
     project_dir=$(pwd)
     project_name=$(basename $project_dir)
-    backup_dir=$(dirname $project_dir)/saveWork_bkup
+    backup_dir=$(dirname $project_dir)/.saveWork_${project_name}_bkup
     mkdir -p $backup_dir
+
+
+function get_backup_dir() {
+    echo ${backup_dir}
+}
+
+
+function push_state {
 
     timestamp=$(date +%Y%m%d%H%M%S)
     backup_file="$backup_dir/backup-$project_name-$timestamp.tar.gz"
@@ -13,118 +20,91 @@ function push_state {
 }
 
 
-function pop_state {
-    project_dir=$(pwd)
-    project_name=$(basename $project_dir)
-    backup_dir=$(dirname $project_dir)/saveWork_bkup
-
-    latest_backup=$(ls -t $backup_dir/backup-$project_name-*.tar.gz | head -n 1)
-
-    if [ -z "$latest_backup" ]; then
-        echo "No saved states to pop."
-    else
-        if [ "$2" != "merge" ]; then
-	    echo "clean restore"
-            rm -r $project_dir/*
-	else
-	    echo "restoring into existing subtree "
-        fi
-        tar -xzf $latest_backup -C $project_dir
-        rm $latest_backup
-        echo "Popped state: $latest_backup"
-    fi
-}
-
-
-function restore_state {
-    project_dir=$(pwd)
-    project_name=$(basename $project_dir)
-    backup_dir=$(dirname $project_dir)/saveWork_bkup
-
-    latest_backup=$(ls -t $backup_dir/backup-$project_name-*.tar.gz | head -n 1)
-
-    if [ -z "$latest_backup" ]; then
-        echo "No saved states to pop."
-    else
-        if [ "$2" != "merge" ]; then
-	    echo "clean restore"
-            rm -r $project_dir/*
-	else
-	    echo " restoring into existing subtree "
-	fi
-        tar -xzf $latest_backup -C $project_dir
-        echo "restored state: $latest_backup"
-    fi
-}
 
 function list_states {
-    project_dir=$(pwd)
-    project_name=$(basename $project_dir)
-    backup_dir=$(dirname $project_dir)/saveWork_bkup
+
+    if [ ! -d "$backup_dir" ] || [ -z "$(ls -A $backup_dir)" ]; then
+        echo "No saved states in ${backup_dir}."
+        return
+    fi
+    
     backup_files=$(ls -t $backup_dir/backup-$project_name-*.tar.gz)
 
-    if [ -z "$backup_files" ]; then
-        echo "No saved states."
-    else
-        echo "Saved states:"
-        for backup_file in $backup_files
-        do
-            timestamp=$(echo $backup_file | grep -o '[0-9]\{14\}')
-            formatted_timestamp=$(date -j -f "%Y%m%d%H%M%S" "$timestamp" "+%Y-%m-%d %H:%M:%S")
-            echo "$backup_file (created at $formatted_timestamp)"
-        done
-    fi
+    echo "Saved states:"
+    for backup_file in $backup_files; do
+        timestamp=$(echo $backup_file | grep -o '[0-9]\{14\}')
+        formatted_timestamp=$(date -j -f "%Y%m%d%H%M%S" "$timestamp" "+%Y-%m-%d %H:%M:%S")
+        echo "$backup_file (created at $formatted_timestamp)"
+    done
 }
 
-function duplicate_state {
-    if [ -z "$2" ]; then
-        echo "Please specify a directory for the duplicate state."
-        exit 1
-    fi
+function pop_state {
 
-    project_dir=$(pwd)
-    project_name=$(basename $project_dir)
-    backup_dir=$(dirname $project_dir)/saveWork_bkup
+    if [ ! -d "$backup_dir" ] || [ -z "$(ls -A $backup_dir)" ]; then
+        echo "No saved states to pop."
+        return
+    fi
 
     latest_backup=$(ls -t $backup_dir/backup-$project_name-*.tar.gz | head -n 1)
-
-    if [ -z "$latest_backup" ]; then
-        echo "No saved states to duplicate."
-        exit 1
+    if [ "$1" != "merge" ]; then
+        rm -r $project_dir/*
+    fi
+    tar -xzf $latest_backup -C $project_dir
+    rm $latest_backup
+    if [ "$1" != "merge" ]; then
+	echo "popped state: $latest_backup"
     else
-        mkdir -p $2
-        tar -xzf $latest_backup -C $2
-        echo "Duplicated state to: $2"
+	echo "popped (merge) state: $latest_backup"
     fi
 }
 
+function restore_state {
+
+    if [ ! -d "$backup_dir" ] || [ -z "$(ls -A $backup_dir)" ]; then
+        echo "No saved states to restore."
+        return
+    fi
+
+    latest_backup=$(ls -t $backup_dir/backup-$project_name-*.tar.gz | head -n 1)
+    if [ "$1" != "merge" ]; then
+        rm -r $project_dir/*
+    fi
+    tar -xzf $latest_backup -C $project_dir
+
+    if [ "$1" != "merge" ]; then
+	echo "restored state: $latest_backup"
+    else
+	echo "restored (merge) state: $latest_backup"
+    fi
+}
 
 case "$1" in
     push)
         push_state
         ;;
     pop)
-        pop_state
+        pop_state "${@:2}"
+        ;;
+    restore)
+        restore_state "${@:2}"
         ;;
     list)
         list_states
         ;;
-    duplicate)
-	duplicate_state
-	;;
-    restore)
-	restore_state
+    backup_dir)
+	get_backup_dir
 	;;
     *)
-        echo "Usage: $0 {push|duplicate <pathspec>|pop [over]|restore [over]}"
-	echo "  push      -- make a tgz of the tree rooted at the cwd, push it into a stack named ''saveWork_bkup''"
-        echo "               in the  directory above the cwd."
-	echo "  duplicate --  makes a copy of the latest backup at the given <pathspec>"
-	echo "  list      -- list the backups currently available for the cwd."
-	echo "  pop       -- restore the last saved tarball of the cwd, and delete the tarball afterwards."
-	echo "  restore   -- restore the last saved tarball of the cwd, but do not delete the tarball afterwards."
-	echo ""
-	echo "               by default,  pop and restore wipe the subtree at cwd before restoring; the ''over'' option to"
-	echo "               pop and restore causes the backup to be restored into/over the existing cwd; "
-	echo ""
+        echo "Usage: $0 {push|pop [merge]|restore [merge]|list|backup_dir}"
+        echo "Commands:"
+        echo "  push          - Save the current state."
+        echo "  pop           - Restore the most recently saved state and remove it from the stack."
+        echo "                  Use 'pop merge' to merge with current state."
+        echo "  restore       - Restore the most recently saved state without removing it from the stack."
+        echo "                  Use 'restore merge' to merge with current state."
+        echo "  list          - List all saved states."
+	echo "  backup_dir    - echo the directory path spec of the backup dir used for invokations in the"
+	echo "                  current working directory."
+        ;;
 esac
+

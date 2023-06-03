@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# Get the full path to the script to test
+script=$(pwd)/savework
+
+function cleanup() {
+    echo "Cleaning up..."
+    cd ..
+    [ -d "test_dir" ] && rm -r test_dir
+    [ -d ".saveWork_bkup" ] && rm -r .saveWork_bkup
+    echo "... done."
+}
+
+# cleanup at start and successful exit, not at error exit.
+cleanup
+
+# Create a directory for testing
+mkdir test_dir
+cd test_dir
+
+# Create some test files
+echo "Test 1" > file1.txt
+echo "Test 2" > file2.txt
+
+# Test push
+$script push
+if [ $? -ne 0 ]; then
+    echo "Push command failed!"
+    exit 1
+fi
+
+# Modify file and create a new one
+echo "Test 1 Modified" > file1.txt
+echo "Test 3" > file3.txt
+
+# test restore merge (file3 should be there but file1 should be restored.
+$script restore merge
+
+
+# Check if the file1 contents match the pushed state
+if [ "$(cat file1.txt)" != "Test 1" ]; then
+    echo "Restore merge command didn't correctly restore the state of file 1!"
+    exit 1
+fi
+
+# check the file3 is still there
+if [ ! -f file3.txt ]; then
+    echo "Restore merge deleted the new file file3.txt."
+    exit 1
+fi
+
+# check for completeness sake that the contents of the new file file3.txt are unchanged.
+if [ "$(cat file3.txt)" != "Test 3" ]; then
+    echo "restore merge somehow damaged the newly created file file3.txt.."
+    exit 1
+fi
+
+# Modify files and create a new one
+echo "Test file1 Modified" > file1.txt
+echo "Test 4" > file3.txt
+
+# Test restore without merge (file1 should be restored and file3 should be gone)
+
+$script restore
+if [ $? -ne 0 ]; then
+    echo "Restore command failed!"
+    exit 1
+fi
+
+# Check if the file1 contents match the pushed state
+if [ "$(cat file1.txt)" != "Test 1" ]; then
+    echo "Restore command didn't correctly restore the file1.txt state!"
+    exit 1
+fi
+
+# Check that file3.txt is gone.
+if [ -f file3.txt ]; then
+    echo "Restore failed to delete the new file file3.txt."
+    exit 1
+fi
+
+
+# Modify file and create a new one
+echo "Test 1 Modified again" > file1.txt
+echo "Test 3" > file3.txt
+
+# Test pop
+$script pop
+if [ $? -ne 0 ]; then
+    echo "Pop command failed!"
+    exit 1
+fi
+
+# Check if the file1 contents match the pushed state
+if [ "$(cat file1.txt)" != "Test 1" ]; then
+    echo "pop command didn't correctly restore the file1.txt state!"
+    exit 1
+fi
+
+# Check that file3.txt is gone.
+if [ -f file3.txt ]; then
+    echo "pop command failed to delete the new file file3.txt."
+    exit 1
+fi
+
+
+# Get the backup directory using the backup_dir command
+backup_dir=$($script backup_dir)
+
+# Run the list command and capture its output
+output=$($script list)
+
+# Compare the output with the expected string
+if [ "$output" != "No saved states in ${backup_dir}." ]; then
+    echo "pop failed to delete the saved state: ${output}"
+    exit 1
+fi
+
+echo "All tests passed!"
+
+cleanup
